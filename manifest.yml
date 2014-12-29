@@ -1,0 +1,6 @@
+---
+applications:
+- name: mongojs-gnavi
+memory: 512M
+instances: 1
+host: mongojs-gnavi-${random-word}
