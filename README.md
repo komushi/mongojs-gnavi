@@ -3,23 +3,6 @@
 ## Live Demo
 [DEMO](http://angular-gnavi-express.herokuapp.com/)
 
-## Screenshots
-
-### 都道府県
-![都道府県](https://github.com/komushi/angular-gnavi-express/raw/master/images/prefs.png)
-
-### エリア
-![エリア](https://github.com/komushi/angular-gnavi-express/raw/master/images/areas.png)
-
-### カテゴリ
-![カテゴリ](https://github.com/komushi/angular-gnavi-express/raw/master/images/cats.png)
-
-### エリア対カテゴリ
-![エリア対カテゴリ](https://github.com/komushi/angular-gnavi-express/raw/master/images/areasCats.png)
-
-### カテゴリ対エリア
-![カテゴリ対エリア](https://github.com/komushi/angular-gnavi-express/raw/master/images/catsAreas.png)
-
 ## DataSource
 
 [ぐるなびWebサービス](http://api.gnavi.co.jp)
