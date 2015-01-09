@@ -1,5 +1,5 @@
 // var vcap_services = JSON.parse(process.env.VCAP_SERVICES);
-var vcap_services = JSON.parse('{"mongolab":[{"name":"gnavi-json","label":"mongolab","tags":["document","mongodb","Data Store"],"plan":"sandbox","credentials":{"uri":"mongodb://CloudFoundry_ids0og1r_dnb1iag3_2snsv6co:cVBkPdnzZr9TWePtVDIy0F-cQK1dgGEx@ds043220.mongolab.com:43220/CloudFoundry_ids0og1r_dnb1iag3"}}]}');
+var vcap_services = JSON.parse('{"mongolab":[{"name":"gnavi-json","label":"mongolab","tags":["document","mongodb","Data Store"],"plan":"sandbox","credentials":{"uri":"mongodb://CloudFoundry_ids0og1r_raeg4u11_3t4su8ja:jIihP2DJBQ0hOQDFMpruYwk0EpuKBCmk@ds031691.mongolab.com:31691/CloudFoundry_ids0og1r_raeg4u11"}}]}');
 var uri = vcap_services.mongolab[0].credentials.uri;
 
 var collections = ["cursor", "gnavi"];
@@ -51,15 +51,15 @@ function saveCursor(next_start) {
     if( err || !cursors) 
     {
       db.cursor.save({keyid: "cursor", position: next_start}, function(err, saved) {
-        if( err || !saved ) console.log("User not saved");
-        else console.log("User saved");
+        if( err || !saved ) console.log("Cursor not saved");
+        else console.log("Cursor saved");
       });
 
     }
     else cursors.forEach( function(cursor) {
       db.cursor.update({keyid: "cursor"}, {$set: {position: next_start}}, function(err, updated) {
-        if( err || !updated ) console.log("User not updated");
-        else console.log("User updated");
+        if( err || !updated ) console.log("Cursor not updated");
+        else console.log("Cursor updated");
       });
 
 
@@ -69,9 +69,63 @@ function saveCursor(next_start) {
 
 };
 
+var baseURL = "http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=23cf42cc2b30d584faae96e40544372e&format=json";
 
-app.get('/callSaveGnavi', function (req, res) {
-  var url = "http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=23cf42cc2b30d584faae96e40544372e&pref=PREF13&hit_per_page=5&format=json";
+function findURLbyCursor(pArea) {
+
+  var url;
+
+  console.log("findURLbyCursorx");
+
+      // db.cursor.save({keyid: "cursor", position: 1}, function(err, saved) {
+      //   if( err || !saved ) console.log("Cursor not saved");
+      //   else console.log("Cursor saved");
+      // });
+
+  db.cursor.find({area: pArea}, function(err, cursors) {
+    console.log(err);
+    console.log(cursors);
+    console.log(cursors.length);
+    if(err || !cursors) 
+    {
+      console.log("error");
+    }
+    else if (cursors.length == 0) 
+    {
+      console.log("no cursor");
+      db.cursor.save({area: pArea, hit_per_page: 10, offset_page: 1}, function(err, saved) {
+        if( err || !saved ) console.log("Cursor not saved");
+        else {
+          url = baseURL + "&pref=" + pArea + "&hit_per_page=10&offset_page=1";
+          console.log("url:" + url);
+        }
+      });
+    }
+    else cursors.forEach( function(cursor) {
+      
+      console.log("found");
+      var next_offset_page = Number(cursor.offset_page) + 1;
+      url = baseURL + "&pref=" + cursor.area + "&hit_per_page=10" + "&offset_page=" + next_offset_page;
+      console.log("url:" + url);
+    });
+
+
+  });
+
+  return url;
+};
+
+app.get('/api/test', function (req, res) {
+  // var area = req.query.area;
+  console.log(req.query.area);
+  // res.send('found something?');
+  res.send(findURLbyCursor(req.query.area));
+});
+
+app.get('/api/callSaveGnavi', function (req, res) {
+
+  // var url = "http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=23cf42cc2b30d584faae96e40544372e&pref=PREF11&hit_per_page=10&format=json";
+  var url = findURLbyCursor(req.query.area);
   res.set('Content-Type', 'application/json');
 
   request(url, function (error, response, body) {
@@ -86,7 +140,7 @@ app.get('/callSaveGnavi', function (req, res) {
         console.log(jsonbody.rest[i].name);  
         db.gnavi.save(jsonbody.rest[i] , function(err, saved) {
           if( err || !saved ) console.log("Rest not saved");
-          else console.log(i + ") " + jsonbody.rest[i].name_kana + " saved");
+          else console.log(jsonbody.rest[i].name_kana + " saved");
         });
       }
     }
@@ -96,7 +150,7 @@ app.get('/callSaveGnavi', function (req, res) {
       console.log(error);
 
     }
-  })
+  });
 });
 
 
