@@ -11,6 +11,7 @@ var request = require('request');
 var application_root = __dirname;
 var express = require("express");
 var path = require("path");
+var Q = require("q");
 var app = express();
 
 var allowCrossDomain = function(req, res, next) {
@@ -45,47 +46,17 @@ function getNextStart(total_hit_count, hit_per_page, page_offset) {
 };
 
 
-function saveCursor(next_start) {
-
-  db.cursor.find({keyid: "cursor"}, function(err, cursors) {
-    if( err || !cursors) 
-    {
-      db.cursor.save({keyid: "cursor", position: next_start}, function(err, saved) {
-        if( err || !saved ) console.log("Cursor not saved");
-        else console.log("Cursor saved");
-      });
-
-    }
-    else cursors.forEach( function(cursor) {
-      db.cursor.update({keyid: "cursor"}, {$set: {position: next_start}}, function(err, updated) {
-        if( err || !updated ) console.log("Cursor not updated");
-        else console.log("Cursor updated");
-      });
 
 
-    } );
-  });
+var findURLbyCursor = function(pArea) {
 
-
-};
-
-var baseURL = "http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=23cf42cc2b30d584faae96e40544372e&format=json";
-
-function findURLbyCursor(pArea) {
-
+  var d = Q.defer();
+  var baseURL = "http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=23cf42cc2b30d584faae96e40544372e&format=json";
   var url;
 
-  console.log("findURLbyCursorx");
-
-      // db.cursor.save({keyid: "cursor", position: 1}, function(err, saved) {
-      //   if( err || !saved ) console.log("Cursor not saved");
-      //   else console.log("Cursor saved");
-      // });
+  console.log("findURLbyCursor");
 
   db.cursor.find({area: pArea}, function(err, cursors) {
-    console.log(err);
-    console.log(cursors);
-    console.log(cursors.length);
     if(err || !cursors) 
     {
       console.log("error");
@@ -93,33 +64,112 @@ function findURLbyCursor(pArea) {
     else if (cursors.length == 0) 
     {
       console.log("no cursor");
-      db.cursor.save({area: pArea, hit_per_page: 10, offset_page: 1}, function(err, saved) {
+      db.cursor.save({area: pArea, hit_per_page: 5, offset_page: 1}, function(err, saved) {
         if( err || !saved ) console.log("Cursor not saved");
         else {
-          url = baseURL + "&pref=" + pArea + "&hit_per_page=10&offset_page=1";
+          url = baseURL + "&pref=" + pArea + "&hit_per_page=5&offset_page=1";
           console.log("url:" + url);
+
+          d.resolve(url);
         }
       });
     }
     else cursors.forEach( function(cursor) {
+
+      if (cursor.offset_page == -1)
+      {
+        console.log("found but done");
+
+        d.reject(new Error("Already done"));
+
+      }
+      else
+      {
+        console.log("found");
+
+        var next_offset_page = Number(cursor.offset_page) + 1;
+        url = baseURL + "&pref=" + cursor.area + "&hit_per_page=" + cursor.hit_per_page + "&offset_page=" + next_offset_page;
+
+        d.resolve(url);
+      }
       
-      console.log("found");
-      var next_offset_page = Number(cursor.offset_page) + 1;
-      url = baseURL + "&pref=" + cursor.area + "&hit_per_page=10" + "&offset_page=" + next_offset_page;
-      console.log("url:" + url);
     });
-
-
   });
 
-  return url;
+  return d.promise;
+
+};
+
+var saveGnaviRest = function(jsonbody)
+{
+
+  var d = Q.defer();
+
+  for (var i in jsonbody.rest)
+  {
+    db.gnavi.save(jsonbody.rest[i] , function(err, saved) {
+      if( err || !saved ) console.log("Rest not saved");
+      else ;
+    });
+  }
+
+  d.resolve();
+
+  return d.promise;
+};
+
+var invokeGnavi = function(url) {
+
+  console.log(url);
+
+  var d = Q.defer();
+
+  request(url, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      // res.set('Content-Type', 'application/json');
+      // res.send(body);
+
+      var jsonbody = JSON.parse(body);
+
+      saveGnaviRest(jsonbody).then(function (o) {
+          console.log("Rest saved");
+      });
+
+      // for (var i in jsonbody.rest)
+      // {
+      //   console.log(jsonbody.rest[i].name);  
+      //   db.gnavi.save(jsonbody.rest[i] , function(err, saved) {
+      //     if( err || !saved ) console.log("Rest not saved");
+      //     else console.log(jsonbody.rest[i].name_kana + " saved");
+      //   });
+      // }
+    }
+    else
+    {
+      console.log(response.statusCode);
+      console.log(error);
+
+    }
+  });
+
+  d.resolve();
+  return d.promise;
+
 };
 
 app.get('/api/test', function (req, res) {
-  // var area = req.query.area;
-  console.log(req.query.area);
-  // res.send('found something?');
-  res.send(findURLbyCursor(req.query.area));
+  
+  findURLbyCursor(req.query.area)
+    .then(invokeGnavi, function (error) {
+      console.log('Something went wrong in 1-3: ' + error.message);
+  }).then(function (o) {
+          res.send('Our Sample API is up...');
+      })
+    .done();
+
+
+  // invokeGnavi(url);
+
 });
 
 app.get('/api/callSaveGnavi', function (req, res) {
