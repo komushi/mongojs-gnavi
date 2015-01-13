@@ -1,6 +1,12 @@
-// var vcap_services = JSON.parse(process.env.VCAP_SERVICES);
-var vcap_services = JSON.parse('{"mongolab":[{"name":"gnavi-json","label":"mongolab","tags":["document","mongodb","Data Store"],"plan":"sandbox","credentials":{"uri":"mongodb://CloudFoundry_ids0og1r_raeg4u11_3t4su8ja:jIihP2DJBQ0hOQDFMpruYwk0EpuKBCmk@ds031691.mongolab.com:31691/CloudFoundry_ids0og1r_raeg4u11"}}]}');
+var vcap_services = JSON.parse(process.env.VCAP_SERVICES);
+// var vcap_services = JSON.parse('{"mongolab":[{"name":"gnavi-json","label":"mongolab","tags":["document","mongodb","Data Store"],"plan":"sandbox","credentials":{"uri":"mongodb://CloudFoundry_ids0og1r_raeg4u11_3t4su8ja:jIihP2DJBQ0hOQDFMpruYwk0EpuKBCmk@ds031691.mongolab.com:31691/CloudFoundry_ids0og1r_raeg4u11"}}]}');
 var uri = vcap_services.mongolab[0].credentials.uri;
+
+// var cfenv = require("cfenv");
+// var appEnv = cfenv.getAppEnv();
+// var mongoService = appEnv.getService('mongolab');
+// var credentials = mongoService.credentials;
+// var uri = credentials.uri;
 
 var collections = ["cursor", "gnavi"];
 var mongojs = require('mongojs');
@@ -12,7 +18,7 @@ var application_root = __dirname;
 var express = require("express");
 var path = require("path");
 var Q = require("q");
-var sleep = require("sleep");
+
 var app = express();
 
 var allowCrossDomain = function(req, res, next) {
@@ -51,11 +57,13 @@ var getNextOffSet = function(total_hit_count, hit_per_page, page_offset) {
 
 var findURLbyCursor = function(pArea) {
 
+  console.log("findURLbyCursor area:" + pArea);
+
   var d = Q.defer();
+
   var baseURL = "http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=23cf42cc2b30d584faae96e40544372e&format=json";
   var url;
-
-  console.log("findURLbyCursor");
+  var keyObj;
 
   db.cursor.find({area: pArea}, function(err, cursors) {
     if(err || !cursors) 
@@ -64,20 +72,21 @@ var findURLbyCursor = function(pArea) {
     }
     else if (cursors.length == 0) 
     {
-      console.log("no cursor");
-      db.cursor.save({area: pArea, hit_per_page: 5, offset_page: 1}, function(err, saved) {
+      console.log("no cursor found");
+      var hit_per_page = 2;
+      db.cursor.save({area: pArea, hit_per_page: hit_per_page, offset_page: 1}, function(err, saved) {
         if( err || !saved ) console.log("Cursor not saved");
         else {
-          url = baseURL + "&pref=" + pArea + "&hit_per_page=5&offset_page=1";
-          
+          url = baseURL + "&pref=" + pArea + "&hit_per_page=" + hit_per_page + "&offset_page=1";
+          keyObj = {url: url, area: pArea};
 
-          d.resolve(url);
+          d.resolve(keyObj);
         }
       });
     }
     else cursors.forEach( function(cursor) {
 
-      if (cursor.offset_page == -1)
+      if (cursor.offset_page >= 5)
       {
         console.log("found but done");
 
@@ -86,12 +95,12 @@ var findURLbyCursor = function(pArea) {
       }
       else
       {
-        console.log("found");
+        console.log("found cursor: " + cursor.offset_page);
 
-        var next_offset_page = Number(cursor.offset_page) + 1;
-        url = baseURL + "&pref=" + cursor.area + "&hit_per_page=" + cursor.hit_per_page + "&offset_page=" + next_offset_page;
-
-        d.resolve(url);
+        // var next_offset_page = getNextOffSet(, cursor.hit_per_page, cursor.offset_page);
+        url = baseURL + "&pref=" + cursor.area + "&hit_per_page=" + cursor.hit_per_page + "&offset_page=" + cursor.offset_page;
+        keyObj = {url: url, area: pArea};
+        d.resolve(keyObj);
       }
       
     });
@@ -101,28 +110,26 @@ var findURLbyCursor = function(pArea) {
 
 };
 
-var invokeGnavi = function(url) {
+var invokeGnavi = function(keyObj) {
+
+  console.log("invokeGnavi url");
 
   var d = Q.defer();
 
-  request(url, function (error, response, body) {
+  request(keyObj.url, function (error, response, body) {
     if (!error && response.statusCode == 200) {
-      // res.set('Content-Type', 'application/json');
-      // res.send(body);
-
       var jsonbody = JSON.parse(body);
 
       for (var i in jsonbody.rest)
       {
-        jsonbody.rest[i]["savedtime"] = new Date();
+        jsonbody.rest[i]["savedtime"] = new Date().toISOString();
         db.gnavi.save(jsonbody.rest[i] , function(err, saved) {
           if( err || !saved ) console.log("Rest not saved");
           else ;
         });
       }
 
-
-      d.resolve();
+      d.resolve(keyObj);
     }
     else
     {
@@ -134,23 +141,57 @@ var invokeGnavi = function(url) {
 
 };
 
+var updateCursor = function(keyObj)
+{
+
+  var d = Q.defer();
+
+  // if (!keyObj) return d.promise;
+
+  db.cursor.find({area: keyObj.area}, function(err, cursors) {
+    if(err || !cursors) 
+    {
+      d.reject(new Error(err));
+    }
+    else cursors.forEach( function(cursor) {
+      console.log("updateCursor found cursor:" + cursor.offset_page);
+      
+    });
+  });
+
+
+  db.cursor.update({area: keyObj.area}, {$inc: {offset_page: 1}, $set: {last_update: (new Date()).toISOString()}}, 
+    function(err, updated) {
+      if( err || !updated ) {
+        console.log("Not updated");
+        d.reject(new Error(err));
+      }
+      else {
+        console.log("updateCursor area:" + keyObj.area);
+        d.resolve(keyObj.area);
+      }
+    }
+  );
+
+  return d.promise;
+
+};
+
+var startCrawling = function(pArea)
+{
+
+  findURLbyCursor(pArea)
+    .then(invokeGnavi)
+    .then(updateCursor)
+    .then(startCrawling)
+    .catch(console.error)
+    .done();
+};
 
 app.get('/api/test', function (req, res) {
   
-  for (i = 0; i < 2; i++) {
-    // if (i == 100) { break; }
-    sleep.sleep(1);
 
-
-    findURLbyCursor(req.query.area)
-      .then(invokeGnavi, function (error) {
-          console.log('invokeGnavi went wrong: ' + error.message);
-        })
-      .then(function(){db.close();console.log("Rest page saved");})
-      .done();
-      
-      
-  }
+  startCrawling(req.query.area);
 
   res.send('ds');
 
