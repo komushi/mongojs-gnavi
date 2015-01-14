@@ -1,11 +1,14 @@
-var vcap_services = JSON.parse(process.env.VCAP_SERVICES);
-// var vcap_services = JSON.parse('{"mongolab":[{"name":"gnavi-json","label":"mongolab","tags":["document","mongodb","Data Store"],"plan":"sandbox","credentials":{"uri":"mongodb://CloudFoundry_ids0og1r_raeg4u11_3t4su8ja:jIihP2DJBQ0hOQDFMpruYwk0EpuKBCmk@ds031691.mongolab.com:31691/CloudFoundry_ids0og1r_raeg4u11"}}]}');
+// var vcap_services = JSON.parse(process.env.VCAP_SERVICES);
+var vcap_services = JSON.parse('{"mongolab":[{"name":"gnavi_mongo","label":"mongolab","tags":["document","mongodb","Data Store"],"plan":"sandbox","credentials":{"uri":"mongodb://CloudFoundry_ids0og1r_hlaug1jk_m7luudm2:ZOpeI8kR-aCxW3gfnVdKKTM4FB-q1LF4@ds031601.mongolab.com:31601/CloudFoundry_ids0og1r_hlaug1jk"}}]}');
 var uri = vcap_services.mongolab[0].credentials.uri;
 
 // var cfenv = require("cfenv");
 // var appEnv = cfenv.getAppEnv();
-// var mongoService = appEnv.getService('mongolab');
-// var credentials = mongoService.credentials;
+// var services = appEnv.getServices();
+// console.log("services:" + JSON.stringify(services));
+// var myservice = appEnv.getService("gnavi_mongo");
+// var credentials = myservice.credentials;
+// console.log("credentials:" + credentials);
 // var uri = credentials.uri;
 
 var collections = ["cursor", "gnavi"];
@@ -39,22 +42,6 @@ var allowCrossDomain = function(req, res, next) {
 app.use(allowCrossDomain);
 app.use(express.static(path.join(application_root, "public")));
 
-var getNextOffSet = function(total_hit_count, hit_per_page, page_offset) {
-  if (page_offset * hit_per_page >= total_hit_count)
-  {
-
-    return -1;
-  }
-  else
-  {
-
-    return page_offset + 1;
-  }
-};
-
-
-
-
 var findURLbyCursor = function(pArea) {
 
   console.log("findURLbyCursor area:" + pArea);
@@ -73,20 +60,26 @@ var findURLbyCursor = function(pArea) {
     else if (cursors.length == 0) 
     {
       console.log("no cursor found");
-      var hit_per_page = 2;
-      db.cursor.save({area: pArea, hit_per_page: hit_per_page, offset_page: 1}, function(err, saved) {
-        if( err || !saved ) console.log("Cursor not saved");
-        else {
-          url = baseURL + "&pref=" + pArea + "&hit_per_page=" + hit_per_page + "&offset_page=1";
-          keyObj = {url: url, area: pArea};
+      var hit_per_page = 500;
 
-          d.resolve(keyObj);
-        }
-      });
+
+      // db.cursor.save({area: pArea, hit_per_page: hit_per_page, offset_page: 1}, function(err, saved) {
+      //   if( err || !saved ) console.log("Cursor not saved");
+      //   else {
+      //     url = baseURL + "&pref=" + pArea + "&hit_per_page=" + hit_per_page + "&offset_page=1";
+      //     keyObj = {url: url, area: pArea};
+
+      //     d.resolve(keyObj);
+      //   }
+      // });
+      url = baseURL + "&pref=" + pArea + "&hit_per_page=" + hit_per_page + "&offset_page=1";
+      keyObj = {url: url, area: pArea, hit_per_page: hit_per_page, offset_page: 1};
+      d.resolve(keyObj);
+
     }
     else cursors.forEach( function(cursor) {
 
-      if (cursor.offset_page >= 5)
+      if (cursor.offset_page == -1)
       {
         console.log("found but done");
 
@@ -97,9 +90,8 @@ var findURLbyCursor = function(pArea) {
       {
         console.log("found cursor: " + cursor.offset_page);
 
-        // var next_offset_page = getNextOffSet(, cursor.hit_per_page, cursor.offset_page);
         url = baseURL + "&pref=" + cursor.area + "&hit_per_page=" + cursor.hit_per_page + "&offset_page=" + cursor.offset_page;
-        keyObj = {url: url, area: pArea};
+        keyObj = {url: url, area: pArea, hit_per_page: cursor.hit_per_page, offset_page: cursor.offset_page};
         d.resolve(keyObj);
       }
       
@@ -129,6 +121,8 @@ var invokeGnavi = function(keyObj) {
         });
       }
 
+      console.log("jsonbody.total_hit_count:" + jsonbody.total_hit_count);
+      keyObj["total_hit_count"] = jsonbody.total_hit_count;
       d.resolve(keyObj);
     }
     else
@@ -146,21 +140,30 @@ var updateCursor = function(keyObj)
 
   var d = Q.defer();
 
-  // if (!keyObj) return d.promise;
+  // db.cursor.update({area: keyObj.area}, 
+  //   {$inc: {offset_page: 1}, $set: {last_update: (new Date()).toISOString(), total_hit_count: keyObj.total_hit_count}}, 
+  //   function(err, updated) {
+  //     if( err || !updated ) {
+  //       console.log("Not updated");
+  //       d.reject(new Error(err));
+  //     }
+  //     else {
+  //       console.log("updateCursor area:" + keyObj.area);
+  //       d.resolve(keyObj.area);
+  //     }
+  //   }
+  // );
 
-  db.cursor.find({area: keyObj.area}, function(err, cursors) {
-    if(err || !cursors) 
-    {
-      d.reject(new Error(err));
-    }
-    else cursors.forEach( function(cursor) {
-      console.log("updateCursor found cursor:" + cursor.offset_page);
-      
-    });
-  });
+  // console.log("keyObj:" + JSON.stringify(keyObj));
 
-
-  db.cursor.update({area: keyObj.area}, {$inc: {offset_page: 1}, $set: {last_update: (new Date()).toISOString()}}, 
+  db.cursor.update(
+    {area: keyObj.area}, 
+    {$set: {area: keyObj.area,
+            last_update: (new Date()).toISOString(), 
+            total_hit_count: keyObj.total_hit_count,
+            hit_per_page: keyObj.hit_per_page, 
+            offset_page: getNextOffSet(keyObj.total_hit_count, keyObj.hit_per_page, keyObj.offset_page)}},
+    {upsert: true},
     function(err, updated) {
       if( err || !updated ) {
         console.log("Not updated");
@@ -175,6 +178,23 @@ var updateCursor = function(keyObj)
 
   return d.promise;
 
+};
+
+var getNextOffSet = function(total_hit_count, hit_per_page, offset_page) {
+  if (offset_page >= 5)
+  {
+
+   return -1; 
+  }
+
+  if (offset_page * hit_per_page >= total_hit_count)
+  {
+    return -1;
+  }
+  else
+  {
+    return offset_page + 1;
+  }
 };
 
 var startCrawling = function(pArea)
@@ -193,7 +213,7 @@ app.get('/api/test', function (req, res) {
 
   startCrawling(req.query.area);
 
-  res.send('ds');
+  res.send('Started crawling pref:' + req.query.area);
 
 });
 
@@ -201,9 +221,6 @@ app.get('/api/test', function (req, res) {
 app.get('/api/callSaveGnavi', function (req, res) {
   
   for (i = 0; i < 100; i++) {
-    // if (i == 100) { break; }
-    // sleep.sleep(1);
-
 
     findURLbyCursor(req.query.area)
       .then(invokeGnavi, function (error) {
@@ -217,8 +234,6 @@ app.get('/api/callSaveGnavi', function (req, res) {
   res.send('ds');
 
 });
-
-
 
 
 app.get('/api', function (req, res) {
