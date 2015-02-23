@@ -2,18 +2,19 @@
 // var vcap_services = JSON.parse('{"mongolab":[{"name":"gnavi_mongo","label":"mongolab","tags":["document","mongodb","Data Store"],"plan":"sandbox","credentials":{"uri":"mongodb://CloudFoundry_ids0og1r_hlaug1jk_m7luudm2:ZOpeI8kR-aCxW3gfnVdKKTM4FB-q1LF4@ds031601.mongolab.com:31601/CloudFoundry_ids0og1r_hlaug1jk"}}]}');
 // var uri = vcap_services.mongolab[0].credentials.uri;
 
-var cfenv = require("cfenv");
-var appEnv = cfenv.getAppEnv();
-var services = appEnv.getServices();
-console.log("services:" + JSON.stringify(services));
-var myservice = appEnv.getService("gnavi_mongo");
-var credentials = myservice.credentials;
-console.log("credentials:" + credentials);
-var uri = credentials.uri;
+// var cfenv = require("cfenv");
+// var appEnv = cfenv.getAppEnv();
+// var services = appEnv.getServices();
 
-var collections = ["cursor", "gnavi"];
-var mongojs = require('mongojs');
-var db = mongojs(uri, collections);
+// var myservice = appEnv.getService("gnavi_mongo");
+// var credentials = myservice.credentials;
+
+// var uri = credentials.uri;
+
+
+var mongodbManager = require('./utils/mongodbManager');
+var db;
+var token = process.env["gnavi_token"];
 
 var request = require('request');
 
@@ -21,7 +22,6 @@ var application_root = __dirname;
 var express = require("express");
 var path = require("path");
 var Q = require("q");
-
 var app = express();
 
 var allowCrossDomain = function(req, res, next) {
@@ -48,7 +48,8 @@ var findURLbyCursor = function(pArea) {
 
   var d = Q.defer();
 
-  var baseURL = "http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=23cf42cc2b30d584faae96e40544372e&format=json";
+  var baseURL = "http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=" + token + "&format=json";
+  console.log("baseURL:" + baseURL);
   var url;
   var keyObj;
 
@@ -175,30 +176,13 @@ var startCrawling = function(pArea) {
     .done();
 };
 
-app.get('/api/test', function (req, res) {
+app.get('/api/crawlGnavi', function (req, res) {
   
+  db = mongodbManager.getConnection(["cursor", "gnavi"]);
 
   startCrawling(req.query.area);
 
   res.send('Started crawling pref:' + req.query.area);
-
-});
-
-
-app.get('/api/callSaveGnavi', function (req, res) {
-  
-  for (i = 0; i < 100; i++) {
-
-    findURLbyCursor(req.query.area)
-      .then(invokeGnavi, function (error) {
-          console.log('invokeGnavi went wrong: ' + error.message);
-        })
-      .then(function(){console.log("Rest page saved");})
-      .done();
-  
-  }
-
-  res.send('ds');
 
 });
 

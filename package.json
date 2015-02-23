@@ -7,7 +7,7 @@
     "mongojs-gnavi": "app.js"
   },
   "scripts": {
-    "start": "node ./bin/app.js"
+    "start": "node ./server/app.js"
 
   },
   "repository": {

@@ -8,7 +8,7 @@
 7 info start mongojs-gnavi@1.0.0
 8 verbose unsafe-perm in lifecycle true
 9 info mongojs-gnavi@1.0.0 Failed to exec start script
-10 verbose stack Error: mongojs-gnavi@1.0.0 start: `node ./bin/app.js`
+10 verbose stack Error: mongojs-gnavi@1.0.0 start: `node ./server/app.js`
 10 verbose stack Exit status 8
 10 verbose stack     at EventEmitter.<anonymous> (/usr/local/lib/node_modules/npm/lib/utils/lifecycle.js:212:16)
 10 verbose stack     at EventEmitter.emit (events.js:98:17)
@@ -23,13 +23,13 @@
 15 error node v0.10.33
 16 error npm  v2.1.8
 17 error code ELIFECYCLE
-18 error mongojs-gnavi@1.0.0 start: `node ./bin/app.js`
+18 error mongojs-gnavi@1.0.0 start: `node ./server/app.js`
 18 error Exit status 8
-19 error Failed at the mongojs-gnavi@1.0.0 start script 'node ./bin/app.js'.
+19 error Failed at the mongojs-gnavi@1.0.0 start script 'node ./server/app.js'.
 19 error This is most likely a problem with the mongojs-gnavi package,
 19 error not with npm itself.
 19 error Tell the author that this fails on your system:
-19 error     node ./bin/app.js
+19 error     node ./server/app.js
 19 error You can get their info via:
 19 error     npm owner ls mongojs-gnavi
 19 error There is likely additional logging output above.
