@@ -1,23 +1,18 @@
-// var vcap_services = JSON.parse(process.env.VCAP_SERVICES);
-// var vcap_services = JSON.parse('{"mongolab":[{"name":"gnavi_mongo","label":"mongolab","tags":["document","mongodb","Data Store"],"plan":"sandbox","credentials":{"uri":"mongodb://CloudFoundry_ids0og1r_hlaug1jk_m7luudm2:ZOpeI8kR-aCxW3gfnVdKKTM4FB-q1LF4@ds031601.mongolab.com:31601/CloudFoundry_ids0og1r_hlaug1jk"}}]}');
-// var uri = vcap_services.mongolab[0].credentials.uri;
-
-// var cfenv = require("cfenv");
-// var appEnv = cfenv.getAppEnv();
-// var services = appEnv.getServices();
-
-// var myservice = appEnv.getService("gnavi_mongo");
-// var credentials = myservice.credentials;
-
-// var uri = credentials.uri;
-
+//****************************************
+// 1. Register access key from gnavi, put the key in manifest.yml
+// 2. Create PWS or Bluemix account
+// 3. Create mongodb service named "gnavi_mongo", put the name in manifest.yml
+// 4. Push this app to PWS or Bluemix
+// curl http://<host>/api/crawlGnavi?area=PREF01
+// PREF01~47 means from Hokkaido to Okinawa
+//****************************************
 
 var mongodbManager = require('./utils/mongodbManager');
 var db;
-var token = process.env["gnavi_token"];
+var collection;
+var token = process.env["GNAVI_ACCESSKEY"];
 
 var request = require('request');
-
 var application_root = __dirname;
 var express = require("express");
 var path = require("path");
@@ -54,11 +49,11 @@ var findURLbyCursor = function(pArea) {
   var keyObj;
 
   db.cursor.find({area: pArea}, function(err, cursors) {
-    if(err || !cursors) 
+    if(err || !cursors)
     {
       d.reject(new Error(err));
     }
-    else if (cursors.length == 0) 
+    else if (cursors.length == 0)
     {
       console.log("no cursor found");
       var hit_per_page = 500;
@@ -85,7 +80,7 @@ var findURLbyCursor = function(pArea) {
         keyObj = {url: url, area: pArea, hit_per_page: cursor.hit_per_page, offset_page: cursor.offset_page};
         d.resolve(keyObj);
       }
-      
+
     });
   });
 
@@ -106,7 +101,7 @@ var invokeGnavi = function(keyObj) {
       for (var i in jsonbody.rest)
       {
         jsonbody.rest[i]["savedtime"] = new Date().toISOString();
-        db.gnavi.save(jsonbody.rest[i] , function(err, saved) {
+        collection.save(jsonbody.rest[i] , function(err, saved) {
           if( err || !saved ) console.log("Rest not saved: " + err);
           else ;
         });
@@ -131,11 +126,11 @@ var updateCursor = function(keyObj) {
   var d = Q.defer();
 
   db.cursor.update(
-    {area: keyObj.area}, 
+    {area: keyObj.area},
     {$set: {area: keyObj.area,
-            last_update: (new Date()).toISOString(), 
+            last_update: (new Date()).toISOString(),
             total_hit_count: keyObj.total_hit_count,
-            hit_per_page: keyObj.hit_per_page, 
+            hit_per_page: keyObj.hit_per_page,
             offset_page: getNextOffSet(keyObj.total_hit_count, keyObj.hit_per_page, keyObj.offset_page)}},
     {upsert: true},
     function(err, updated) {
@@ -177,13 +172,15 @@ var startCrawling = function(pArea) {
 };
 
 app.get('/api/crawlGnavi', function (req, res) {
-  
-  db = mongodbManager.getConnection(["cursor", "gnavi"]);
 
+  var cursor = "cursor";
+  var prefecture = "" + req.query.area;
+
+  db = mongodbManager.getConnection([cursor, prefecture]);
+  collection = db.collection(prefecture);
   startCrawling(req.query.area);
 
   res.send('Started crawling pref:' + req.query.area);
-
 });
 
 
@@ -192,5 +189,5 @@ app.get('/api', function (req, res) {
 });
 
 
-app.listen(process.env.PORT || 9000);
+app.listen(process.env.PORT);
 
