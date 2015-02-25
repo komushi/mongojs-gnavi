@@ -3,8 +3,7 @@ applications:
 - name: mongojs-gnavi
   memory: 512M
   instances: 1
-  host: mongojs-gnavi-${random-word}
+  host: mongojs-gnavi
   env:
-    GNAVI_ACCESSKEY:  # gnavi access key for API,
-  services:
-  - gnavi_mongo       # mongodb service instance
+    GNAVI_ACCESSKEY: # gnavi access key for API,
+    SERVICE_NAME: # your mongodb service

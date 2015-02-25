@@ -175,12 +175,18 @@ app.get('/api/crawlGnavi', function (req, res) {
 
   var cursor = "cursor";
   var prefecture = "" + req.query.area;
+  var collectionName = req.query.collection;
 
-  db = mongodbManager.getConnection([cursor, prefecture]);
-  collection = db.collection(prefecture);
-  startCrawling(req.query.area);
+  if (!collectionName) 
+  {
+    collectionName = prefecture;
+  }
 
-  res.send('Started crawling pref:' + req.query.area);
+  db = mongodbManager.getConnection([cursor, collectionName]);
+  collection = db.collection(collectionName);
+
+  startCrawling(prefecture);
+  res.send('Started crawling pref:' + prefecture);
 });
 
 

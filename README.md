@@ -1,7 +1,5 @@
-# mongojs-gnavi for pcf
+# gnavi data crawler for mongodb
 
-## Live Demo
-[DEMO](http://angular-gnavi-express.herokuapp.com/)
 
 ## DataSource
 
@@ -40,21 +38,27 @@ http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=<your_api_key>&category_l=RSFST
 All you need to do is to clone this repository,
 ```
 git clone https://github.com/komushi/mongojs-gnavi
-cd angular-gnavi
+cd mongojs-gnavi
 ```
 
-Remeber to install [node.js and npm](http://nodejs.org/) and then [bower](http://bower.io/) first.
-Then, install the dependencies:
+Edit the manifest.yml
+> ---
+> applications:
+> - name: mongojs-gnavi
+>  memory: 512M
+>  instances: 1
+>  host: mongojs-gnavi-${random-word}
+>  env:
+>    GNAVI_ACCESSKEY: # gnavi access key for API,
+>    SERVICE_NAME: # your mongodb service
+
+
+Remember to install [cf cli](https://github.com/cloudfoundry/cli/releases) first. Then, push the application:
 ```
-npm install
+cf push
 ```
 
-Then, run the Application:
+Start to crawl data with specifying 2 parameters - area & collection
 ```
-npm start
-```
-
-You can access your app at 
-```
-http://localhost:9000/app/
+curl -X GET -i http://mongojs-gnavi.<your-cf-app-domain>/api/crawlGnavi?area=PREF46&collection=gtest
 ```
