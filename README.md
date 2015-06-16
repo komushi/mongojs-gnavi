@@ -60,5 +60,5 @@ cf push
 
 Start to crawl data with specifying 2 parameters - area & collection
 ```
-curl -X GET -i http://mongojs-gnavi.<your-cf-app-domain>/api/crawlGnavi?area=PREF46&collection=gtest
+curl -X GET -i "http://mongojs-gnavi.<your-cf-app-domain>/api/crawlGnavi?area=PREF46&collection=gnavi"
 ```

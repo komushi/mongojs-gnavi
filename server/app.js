@@ -182,6 +182,9 @@ app.get('/api/crawlGnavi', function (req, res) {
     collectionName = prefecture;
   }
 
+  console.log("prefecture:" + prefecture);
+  console.log("collectionName:" + collectionName);
+
   db = mongodbManager.getConnection([cursor, collectionName]);
   collection = db.collection(collectionName);
 
