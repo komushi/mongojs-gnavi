@@ -8,7 +8,6 @@
   },
   "scripts": {
     "start": "node ./server/app.js"
-
   },
   "repository": {
     "type": "git",
@@ -17,11 +16,13 @@
   "author": "Lei Xu",
   "license": "ISC",
   "dependencies": {
-    "mongojs": "~0.18.0",
-    "express": "~4.0.0",
-    "request": "^2.39.0",
-    "q":"1.1.x",
-    "cfenv":"1.0.x"
+    "body-parser": "^1.13.2",
+    "cfenv": "^1.0.0",
+    "express": "^4.13.1",
+    "json-mask": "^0.3.4",
+    "mongojs": "^1.0.2",
+    "q": "1.1.x",
+    "request": "^2.39.0"
   },
   "engines": {
     "node": "0.10.x",

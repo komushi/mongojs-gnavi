@@ -8,28 +8,28 @@
 ### 都道府県
 
 ```
-http://api.gnavi.co.jp/ver1/PrefSearchAPI/?keyid=<your_api_key>&format=json
+http://api.gnavi.co.jp/master/PrefSearchAPI/20150630/?keyid=<your_api_key>&format=json
 ```
 
 
 ### エリア
 
 ```
-http://api.gnavi.co.jp/ver1/AreaSearchAPI/?keyid=<your_api_key>&format=json
+http://api.gnavi.co.jp/master/AreaSearchAPI/20150630/?keyid=<your_api_key>&format=json
 ```
 
 
 ### カテゴリ
 
 ```
-http://api.gnavi.co.jp/ver1/CategoryLargeSearchAPI/?keyid=<your_api_key>&format=json
+http://api.gnavi.co.jp/master/CategoryLargeSearchAPI/20150630/?keyid=<your_api_key>&format=json
 ```
 
 
 ### レストラン
 
 ```
-http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid=<your_api_key>&category_l=RSFST09000&area=AREA110&hit_per_page=1&format=json
+http://api.gnavi.co.jp/RestSearchAPI/20150630/?keyid=<your_api_key>&category_l=RSFST09000&area=AREA110&hit_per_page=1&format=json
 ```
 
 
@@ -60,5 +60,5 @@ cf push
 
 Start to crawl data with specifying 2 parameters - area & collection
 ```
-curl -X GET -i "http://mongojs-gnavi.<your-cf-app-domain>/api/crawlGnavi?area=PREF46&collection=gnavi"
+curl -X PUT -i "http://mongojs-gnavi.<your-cf-app-domain>/api/restaurants?collection=gnavi&area=PREF46"
 ```
