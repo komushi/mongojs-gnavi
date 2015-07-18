@@ -60,5 +60,10 @@ cf push
 
 Start to crawl data with specifying 2 parameters - area & collection
 ```
-curl -X PUT -i "http://mongojs-gnavi.<your-cf-app-domain>/api/restaurants?collection=gnavi&area=PREF46"
+curl -H "Content-Type: application/json" -X PUT -i "http://mongojs-gnavi.<your-cf-app-domain>/api/restaurants" -d '{"pref":[{"pref_code":"PREF01","pref_name":"北海道","area_code":"AREA150"},{"pref_code":"PREF02","pref_name":"青森県","area_code":"AREA160"}],"collection":"gnavi"}'
+```
+
+Start to crawl everythinh
+```
+curl -H "Content-Type: application/json" -X PUT -i "http://mongojs-gnavi.<your-cf-app-domain>/api/restaurants"
 ```
