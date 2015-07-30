@@ -65,5 +65,5 @@ curl -H "Content-Type: application/json" -X PUT -i "http://mongojs-gnavi.<your-c
 
 Start to crawl everythinh
 ```
-curl -H "Content-Type: application/json" -X PUT -i "http://mongojs-gnavi.<your-cf-app-domain>/api/restaurants"
+curl -H "Content-Type: application/json" -H "Content-Length: 0" -X PUT -i "http://mongojs-gnavi.<your-cf-app-domain>/api/restaurants"
 ```
