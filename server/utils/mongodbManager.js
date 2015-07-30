@@ -9,7 +9,7 @@ var getMongoUri = function() {
     var services = appEnv.getServices();
 
     for (service in services) {
-      if (services[service].tags.indexOf("mongodb") >= 0 || services[service].tags.indexOf("mongolab") >= 0) {
+      if (services[service].tags.indexOf("mongodb") >= 0 || services[service].label == "mongolab") {
         var credentials = services[service]["credentials"]
         uri = credentials.uri;
 
