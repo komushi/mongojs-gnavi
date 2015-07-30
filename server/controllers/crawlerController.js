@@ -2,8 +2,7 @@
 var mongodbManager = require('../utils/mongodbManager');
 var db;
 var collection;
-// var token = process.env["GNAVI_ACCESSKEY"];
-var token = "23cf42cc2b30d584faae96e40544372e";
+var token = process.env["GNAVI_ACCESSKEY"];
 
 var request = require('request');
 var Q = require("q");
